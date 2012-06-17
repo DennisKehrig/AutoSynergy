@@ -118,24 +118,9 @@ require('ansinception') ->
 			cursor.write(data).reset().write("\n")
 
 	manageChild = (child, name, callback) ->
-		firstError	= null
-		timeout		= null
-		aborting	= false
-		
 		child.stderr.on 'data', (data) ->
 			echoChild name, data, 'brightRed'
-			now = new Date().getTime()
-			
-			clearTimeout timeout
-			unless aborting
-				timeout = delay config.timeout, -> firstError = null
-			
-			unless firstError
-				firstError = now
-			else if ! aborting and (now - firstError) > config.timeout
-				aborting = true
-				clearTimeout timeout
-				child.kill()
+			child.kill()
 		
 		child.stdout.on 'data', (data) ->
 			echoChild name, data
