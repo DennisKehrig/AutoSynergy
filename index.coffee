@@ -7,6 +7,8 @@ unless mac or win
 os			= require 'os'
 dns			= require 'dns'
 portscanner	= require 'portscanner'
+if win
+	windows	= require 'windows'
 
 spawn		= (require 'child_process').spawn
 
@@ -55,33 +57,50 @@ resolveHostnames = (callback) ->
 						filtered.push ip unless ip in filtered
 					callback filtered
 
-findServer = (callback) ->
-	ownIps = []
-	for device, addresses of os.networkInterfaces()
-		for address in addresses
-			ownIps.push address.address unless address.internal or address.family isnt 'IPv4'
+findOwnIps = (callback) ->
+	interfaces = os.networkInterfaces()
 	
-	resolveHostnames (ips) ->
-		do ->
-			return callback null unless ip = ips.shift()
-			
-			next = arguments.callee
-			return next() if ip in ownIps
-			portscanner.checkPortStatus config.port, ip, (err, status) ->
-				throw err if err
-				if status is 'open'
-					callback ip
-				else
-					next()
+	empty = true
+	for own key of interfaces
+		empty = false
+		break
+	
+	unless empty
+		ownIps = []
+		for device, addresses of interfaces
+			for address in addresses
+				ownIps.push address.address unless address.internal or address.family isnt 'IPv4'
+		callback ownIps
+	else
+		first = true
+		dns.lookup os.hostname(), (err, address, family) ->
+			if first and family is 4
+				first = false
+				callback [address]
+
+findServer = (callback) ->
+	findOwnIps (ownIps) ->
+		resolveHostnames (ips) ->
+			do ->
+				return callback null unless ip = ips.shift()
+				
+				next = arguments.callee
+				return next() if ip in ownIps
+				portscanner.checkPortStatus config.port, ip, (err, status) ->
+					throw err if err
+					if status is 'open'
+						callback ip
+					else
+						next()
 
 detectDevice = (callback) ->
 	if mac
-		searchSystemProfiler callback
+		detectDeviceMac callback
 	else if win
-		searchRegistry callback
+		detectDeviceWin callback
 
-searchSystemProfiler = (callback) ->
-	console.log "Searching system profiler"
+detectDeviceMac = (callback) ->
+	console.log "Detecting the device by searching USB devices listed by the system profiler"
 	profiler = spawn "system_profiler", ["SPUSBDataType", "-detailLevel", "mini"]
 	
 	buffer = ""
@@ -91,5 +110,20 @@ searchSystemProfiler = (callback) ->
 	matcher = new RegExp('Product ID: 0x'+config.productId+'\\s*\\n\\s*Vendor ID:\\s*0x'+config.vendorId+'\\s')
 	profiler.on 'exit', (code) ->
 		callback if buffer.match(matcher) then true else false
+
+detectDeviceWin = (callback) ->
+	return callback false
+	console.log "Detecting the device by searching the registry"
+	data = windows.registry 'HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Control/DeviceClasses/{378de44c-56ef-11d1-bc8c-00a0c91405dd}/'
+	matcher = new RegExp('^#\\?#HID#Vid_'+config.vendorId+'&Pid_'+config.productId)
+	for key, sub of data
+		if matcher.test key
+			sub = sub['#']
+			if sub and sub.Control
+				sub = sub.Control
+				for name of sub
+					if name is "Linked\tREG_DWORD\t0x1"
+						return callback true
+	callback false
 
 run()
