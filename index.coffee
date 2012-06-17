@@ -82,7 +82,7 @@ require('ansinception') ->
 		console.log "Launching client, using server #{server}"
 		
 		console.log "Executing " + config.client
-		client = spawn config.client, ['--no-daemon', '--name', config.name, server+':'+config.port]
+		client = spawn config.client, ['--no-daemon', '--no-restart', '--name', config.name, server+':'+config.port]
 		
 		manageChild client, 'client', callback
 
@@ -90,7 +90,7 @@ require('ansinception') ->
 		console.log "Launching server"
 		
 		console.log "Executing " + config.server
-		server = spawn config.server, ['--no-daemon', '--name', config.name, '--address', ':'+config.port, '--config', config.config]
+		server = spawn config.server, ['--no-daemon', '--no-restart', '--name', config.name, '--address', ':'+config.port, '--config', config.config]
 
 		timeout = null
 		do ->
