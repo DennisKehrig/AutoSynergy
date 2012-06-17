@@ -1,0 +1,22 @@
+{
+  "name": "AutoSynergy"
+, "version": "0.0.1"
+, "scripts": {
+    "start": "coffee index"
+  }
+, "author": {
+    "name": "Dennis Kehrig"
+  }
+, "repository": {
+    "type": "git"
+  ,  "url": "git@github.com:DennisKehrig/AutoSynergy.git"
+  }
+, "engines": {
+    "node": "*"
+  }
+, "dependencies": {
+    "coffee-script": ">=1.3.1"
+  , "ansinception": "git+ssh://git@github.com:DennisKehrig/ANSInception.git"
+  , "portscanner": "git+ssh://git@github.com:DennisKehrig/node-portscanner.git"
+  }
+}

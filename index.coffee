@@ -6,10 +6,10 @@ unless mac or win
 
 os			= require 'os'
 dns			= require 'dns'
+portscanner	= require 'portscanner'
 
 spawn		= (require 'child_process').spawn
 
-portscanner	= require './portscanner'
 config		= require './config'
 
 run = ->
