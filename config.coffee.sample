@@ -1,0 +1,5 @@
+module.exports =
+	vendorId	: '046d'
+	productId	: 'c505'
+	port		: 24800
+	servers		: ['localhost', '127.0.0.1']
