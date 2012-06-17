@@ -5,6 +5,7 @@ require('ansinception') ->
 	unless mac or win
 		throw new Error("Unsupported platform "+platform)
 
+	fs			= require 'fs'
 	os			= require 'os'
 	dns			= require 'dns'
 	portscanner	= require 'portscanner'
@@ -13,42 +14,83 @@ require('ansinception') ->
 		windows	= require 'windows'
 	spawn		= (require 'child_process').spawn
 	cursor		= ansi process.stdout
-	
-	config			= require './config'
-	config.name		?= os.hostname()
-	config.interval	?= 5000
-	config.timeout	?= 5000
+
+	config		= null
 
 	run = ->
+		checkConfiguration()
+		cycle()
+
+	cycle = ->
 		console.log "Starting over"
 		console.log ""
 		detectDevice (devicePresent) ->
 			console.log ""
 			if devicePresent
-				launchServer run
+				launchServer cycle
 			else
 				findOwnIps (ownIps) ->
 					resolveIps config.servers, (serverIps) ->
 						findServer serverIps, ownIps, (serverIp) ->
 							if serverIp
 								console.log ""
-								launchClient serverIp, run
+								launchClient serverIp, cycle
 							else
-								delay config.interval, run
+								delay config.interval, cycle
+
+	requiredConfigurationKeys = ['client', 'server', 'config', 'vendorId', 'productId', 'servers']
+
+	defaultConfiguration =
+		port:		24800
+		name:		os.hostname()
+		interval:	5000
+		timeout:	5000
+
+	checkConfiguration = ->
+		console.log "Checking the configuration file"
+		
+		configPath = require.resolve './config'
+		findPathOrQuit configPath, -> "Config file #{configPath} missing\nUse config.coffee.sample as a template"
+		config = require configPath
+		
+		missingRequired = false
+		for key in requiredConfigurationKeys
+			unless config[key]?
+				missingRequired = true
+				cursor.brightRed().write("Configuration: Missing key #{key}").reset().write("\n")
+		process.exit() if missingRequired
+
+		for key, value of defaultConfiguration
+			unless config[key]?
+				config[key] = value
+				cursor.brightYellow().write("Configuration: Using #{key} #{value}").reset().write("\n")
+
+		findPathOrQuit config.client, -> "Client executable #{config.client} not found"
+		findPathOrQuit config.server, -> "Server executable #{config.server} not found"
+		findPathOrQuit config.config, -> "Synergy configuration file #{config.config} not found"
+
+	findPathOrQuit = (path, callback) ->
+		try
+			fs.statSync path
+		catch err
+			if err.code is 'ENOENT'
+				cursor.brightRed().write(callback(path)).reset().write("\n")
+				process.exit()
+			throw err
 
 	launchClient = (server, callback) ->
 		console.log "Launching client, using server #{server}"
 		
 		console.log "Executing " + config.client
-		client = spawn config.client, ['--name', config.name, server+':'+config.port]
+		client = spawn config.client, ['--no-daemon', '--name', config.name, server+':'+config.port]
 		
 		manageChild client, 'client', callback
 
 	launchServer = (callback) ->
 		console.log "Launching server"
 		
-		console.log "Executing " + config.client
-		server = spawn config.server, ['--name', config.name, '--address', ':'+config.port]
+		console.log "Executing " + config.server
+		server = spawn config.server, ['--no-daemon', '--name', config.name, '--address', ':'+config.port, '--config', config.config]
 
 		timeout = null
 		do ->
@@ -70,13 +112,8 @@ require('ansinception') ->
 		data = data.toString() if data.toString?
 		data = data.replace(/^\s+|\s+$/g, '')
 		
-		first = true
 		for line in data.split("\n")
-			if first
-				cursor.grey().write('[' + name + '] ').reset()
-				first = false
-			else
-				cursor.write(name.length + 2)
+			cursor.grey().write('[' + name + '] ').reset()
 			cursor[color]() if color
 			cursor.write(data).reset().write("\n")
 
