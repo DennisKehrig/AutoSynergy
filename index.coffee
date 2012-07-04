@@ -19,13 +19,15 @@ require('ansinception') ->
 
 	run = ->
 		checkConfiguration()
-		cycle()
-
+		try
+			cycle()
+		catch err
+			console.log err.stack
+	
 	cycle = ->
 		console.log "Starting over"
 		console.log ""
 		detectDevice (devicePresent) ->
-			console.log ""
 			if devicePresent
 				launchServer cycle
 			else
@@ -59,7 +61,7 @@ require('ansinception') ->
 				missingRequired = true
 				cursor.brightRed().write("Configuration: Missing key #{key}").reset().write("\n")
 		process.exit() if missingRequired
-
+		
 		for key, value of defaultConfiguration
 			unless config[key]?
 				config[key] = value
@@ -140,8 +142,11 @@ require('ansinception') ->
 				dns.resolve4 server, (err, addresses) ->
 					remaining--
 					if err
-						console.log "Error while resolving #{server}: "
-						console.log err
+						if err.code is 'ENOTFOUND'
+							console.log "#{server} is offline"
+						else
+							console.log "Error while resolving #{server}: "
+							console.log err
 					else
 						console.log "#{server} is at\t#{addresses[0]}"
 						ips[index] = addresses[0]
