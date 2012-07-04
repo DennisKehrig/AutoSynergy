@@ -183,7 +183,9 @@ require('ansinception') ->
 	findServer = (serverIps, ownIps, callback) ->
 		console.log "Finding a server amongst " + serverIps.join(", ")
 		do ->
-			return callback null unless ip = serverIps.shift()
+			unless ip = serverIps.shift()
+				console.log "No server found"
+				return callback null 
 			
 			next = arguments.callee
 			return next() if ip in ownIps
