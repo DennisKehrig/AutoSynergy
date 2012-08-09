@@ -16,7 +16,7 @@ module.exports =
 	# Name of this computer as used in the Synergy configuration file
 	name:		'luke'
 	
-	# msec to before before starting over because the device has been removed or no client has been found
+	# msecs to wait before starting over because the device has been removed or no client has been found
 	interval:	5000
-	# msec to wait until the child process stops spewing out errors, else start over
+	# msecs to wait until the child process stops spewing out errors, else start over
 	timeout:	5000
